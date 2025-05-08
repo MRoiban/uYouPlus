@@ -1,78 +1,53 @@
-export TARGET = iphone:clang:16.5:14.0
-export SDK_PATH = $(THEOS)/sdks/iPhoneOS16.5.sdk/
-export SYSROOT = $(SDK_PATH)
-export ARCHS = arm64
+# 1. Global build variables
+export TARGET          = iphone:clang:latest:15.0        # use 'latest' or replace with '17.4' for your SDK :contentReference[oaicite:0]{index=0}
+export SDK_PATH        = $(THEOS)/sdks/iPhoneOS17.4.sdk  # point to the patched iOS 17.4 SDK :contentReference[oaicite:1]{index=1}
+export SYSROOT         = $(SDK_PATH)                     # ensure headers/libs resolve correctly :contentReference[oaicite:2]{index=2}
+export ARCHS           = arm64                           # modern devices only :contentReference[oaicite:3]{index=3}
 
-export libcolorpicker_ARCHS = arm64
-export libFLEX_ARCHS = arm64
-export Alderis_XCODEOPTS = LD_DYLIB_INSTALL_NAME=@rpath/Alderis.framework/Alderis
-export Alderis_XCODEFLAGS = DYLIB_INSTALL_NAME_BASE=/Library/Frameworks BUILD_LIBRARY_FOR_DISTRIBUTION=YES ARCHS="$(ARCHS)"
-export libcolorpicker_LDFLAGS = -F$(TARGET_PRIVATE_FRAMEWORK_PATH) -install_name @rpath/libcolorpicker.dylib
-export ADDITIONAL_CFLAGS = -I$(THEOS_PROJECT_DIR)/Tweaks/RemoteLog -I$(THEOS_PROJECT_DIR)/Tweaks
+# 2. Tweak instance configuration
+TWEAK_NAME             = uYouPlus
+PACKAGE_NAME           = $(TWEAK_NAME)
+PACKAGE_VERSION        = $(YOUTUBE_VERSION)-$(UYOU_VERSION)
 
-ifneq ($(JAILBROKEN),1)
-export DEBUGFLAG = -ggdb -Wno-unused-command-line-argument -L$(THEOS_OBJ_DIR) -F$(_THEOS_LOCAL_DATA_DIR)/$(THEOS_OBJ_DIR_NAME)/install/Library/Frameworks
-MODULES = jailed
-endif
+# 3. Source files
+$(TWEAK_NAME)_FILES    := $(wildcard Sources/*.xm) $(wildcard Sources/*.x)  # logos & ObjC sources :contentReference[oaicite:4]{index=4}
 
-ifndef YOUTUBE_VERSION
-YOUTUBE_VERSION = 20.05.4
-endif
-ifndef UYOU_VERSION
-UYOU_VERSION = 3.0.4
-endif
-PACKAGE_NAME = $(TWEAK_NAME)
-PACKAGE_VERSION = $(YOUTUBE_VERSION)-$(UYOU_VERSION)
-
-INSTALL_TARGET_PROCESSES = YouTube
-TWEAK_NAME = uYouPlus
-DISPLAY_NAME = YouTube
-BUNDLE_ID = com.google.ios.youtube
-
-$(TWEAK_NAME)_FILES := $(wildcard Sources/*.xm) $(wildcard Sources/*.x)
-$(TWEAK_NAME)_FRAMEWORKS = UIKit Security
-$(TWEAK_NAME)_CFLAGS = -fobjc-arc -DTWEAK_VERSION=\"$(PACKAGE_VERSION)\" -Wno-module-import-in-extern-c
-$(TWEAK_NAME)_INJECT_DYLIBS = Tweaks/uYou/Library/MobileSubstrate/DynamicLibraries/uYou.dylib $(THEOS_OBJ_DIR)/libFLEX.dylib $(THEOS_OBJ_DIR)/iSponsorBlock.dylib $(THEOS_OBJ_DIR)/YouGroupSettings.dylib $(THEOS_OBJ_DIR)/YouTubeDislikesReturn.dylib $(THEOS_OBJ_DIR)/YouPiP.dylib $(THEOS_OBJ_DIR)/YTABConfig.dylib $(THEOS_OBJ_DIR)/YTUHD.dylib $(THEOS_OBJ_DIR)/DontEatMyContent.dylib $(THEOS_OBJ_DIR)/YTVideoOverlay.dylib $(THEOS_OBJ_DIR)/YouMute.dylib $(THEOS_OBJ_DIR)/YouQuality.dylib $(THEOS_OBJ_DIR)/YouSpeed.dylib $(THEOS_OBJ_DIR)/YTClassicVideoQuality.dylib $(THEOS_OBJ_DIR)/NoYTPremium.dylib $(THEOS_OBJ_DIR)/YoutubeSpeed.dylib $(THEOS_OBJ_DIR)/YouTubeX.dylib
-$(TWEAK_NAME)_EMBED_LIBRARIES = $(THEOS_OBJ_DIR)/libcolorpicker.dylib
-$(TWEAK_NAME)_EMBED_FRAMEWORKS = $(_THEOS_LOCAL_DATA_DIR)/$(THEOS_OBJ_DIR_NAME)/install_Alderis.xcarchive/Products/var/jb/Library/Frameworks/Alderis.framework
-$(TWEAK_NAME)_EMBED_BUNDLES = $(wildcard Bundles/*.bundle)
-$(TWEAK_NAME)_EMBED_EXTENSIONS = $(wildcard Extensions/*.appex)
-
-include $(THEOS)/makefiles/common.mk
-ifneq ($(JAILBROKEN),1)
-SUBPROJECTS += Tweaks/Alderis Tweaks/FLEXing/libflex Tweaks/iSponsorBlock Tweaks/YouGroupSettings Tweaks/Return-YouTube-Dislikes Tweaks/YouPiP Tweaks/YTABConfig Tweaks/YTUHD Tweaks/DontEatMyContent Tweaks/YTVideoOverlay Tweaks/YouMute Tweaks/YouQuality Tweaks/YTClassicVideoQuality Tweaks/NoYTPremium Tweaks/YouTube-X Tweaks/YouSpeed
+# 4. Only include your selected subprojects
+SUBPROJECTS            += Tweaks/YouQuality \
+                          Tweaks/YTVideoOverlay \
+                          Tweaks/YouTubeHeader \
+                          Tweaks/iSponsorBlock \
+                          Tweaks/YTClassicVideoQuality \
+                          Tweaks/PSHeader             # minimal set :contentReference[oaicite:5]{index=5}
 include $(THEOS_MAKE_PATH)/aggregate.mk
-endif
-include $(THEOS_MAKE_PATH)/tweak.mk
 
-REMOVE_EXTENSIONS = 1
-CODESIGN_IPA = 0
+# 5. Dylibs to inject (only your six tweaks)
+$(TWEAK_NAME)_INJECT_DYLIBS := \
+  $(THEOS_OBJ_DIR)/YouQuality.dylib \
+  $(THEOS_OBJ_DIR)/YTVideoOverlay.dylib \
+  $(THEOS_OBJ_DIR)/YouTubeHeader.dylib \
+  $(THEOS_OBJ_DIR)/iSponsorBlock.dylib \
+  $(THEOS_OBJ_DIR)/YTClassicVideoQuality.dylib \
+  $(THEOS_OBJ_DIR)/PSHeader.dylib          # trim to kept tweaks :contentReference[oaicite:6]{index=6}
 
-UYOU_PATH = Tweaks/uYou
-UYOU_DEB = $(UYOU_PATH)/com.miro.uyou_$(UYOU_VERSION)_iphoneos-arm.deb
-UYOU_DYLIB = $(UYOU_PATH)/Library/MobileSubstrate/DynamicLibraries/uYou.dylib
-UYOU_BUNDLE = $(UYOU_PATH)/Library/Application\ Support/uYouBundle.bundle
+# 6. No extra embedded libraries or frameworks
+$(TWEAK_NAME)_EMBED_LIBRARIES  :=
+$(TWEAK_NAME)_EMBED_FRAMEWORKS :=
+$(TWEAK_NAME)_EMBED_BUNDLES    :=
+$(TWEAK_NAME)_EMBED_EXTENSIONS :=
 
-internal-clean::
-	@rm -rf $(UYOU_PATH)/*
+# 7. Link against standard frameworks only
+$(TWEAK_NAME)_FRAMEWORKS = UIKit Security
 
-ifneq ($(JAILBROKEN),1)
-before-all::
-	@if [[ ! -f $(UYOU_DEB) ]]; then \
-		rm -rf $(UYOU_PATH)/*; \
-		$(PRINT_FORMAT_BLUE) "Downloading uYou"; \
-	fi
-before-all::
-	@if [[ ! -f $(UYOU_DEB) ]]; then \
- 		curl -s https://repo.miro92.com/debs/com.miro.uyou_$(UYOU_VERSION)_iphoneos-arm.deb -o $(UYOU_DEB); \
- 	fi; \
-	if [[ ! -f $(UYOU_DYLIB) || ! -d $(UYOU_BUNDLE) ]]; then \
-		tar -xf Tweaks/uYou/com.miro.uyou_$(UYOU_VERSION)_iphoneos-arm.deb -C Tweaks/uYou; tar -xf Tweaks/uYou/data.tar* -C Tweaks/uYou; \
-		if [[ ! -f $(UYOU_DYLIB) || ! -d $(UYOU_BUNDLE) ]]; then \
-			$(PRINT_FORMAT_ERROR) "Failed to extract uYou"; exit 1; \
-		fi; \
-	fi;
-else
-before-package::
-	@mkdir -p $(THEOS_STAGING_DIR)/Library/Application\ Support; cp -r Localizations/uYouPlus.bundle $(THEOS_STAGING_DIR)/Library/Application\ Support/
-endif
+# 8. Compile flags
+$(TWEAK_NAME)_CFLAGS     = -fobjc-arc -DTWEAK_VERSION=\"$(PACKAGE_VERSION)\" \
+                           -Wno-module-import-in-extern-c
+
+# 9. Packaging & signing
+INSTALL_TARGET_PROCESSES = YouTube
+REMOVE_EXTENSIONS        = 1
+CODESIGN_IPA             = 0
+
+# 10. Build rules
+include $(THEOS)/makefiles/common.mk
+include $(THEOS_MAKE_PATH)/tweak.mk                   # load default tweak build rules :contentReference[oaicite:7]{index=7}
